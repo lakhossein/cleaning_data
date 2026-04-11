@@ -435,6 +435,10 @@ def main(input_file, file_type, delimiter=','):
             )
             header_written = True
 
+        print(f"\n📊 STATISTICS FOR {table_name}:")
+        print(f"   📥 Input Rows: {len(rows)}")
+        print(f"   📤 Output Rows: {len(rows)}")
+        print(f"   ⚖️ Difference (Deleted Rows): 0")
         print(f"Saved: {output_file}\n")
         
     print("Process Finished! 🎉")

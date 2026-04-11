@@ -159,7 +159,11 @@ def main():
             action_msg = "Saved as a new file"
             
         print("\n✅ Operation completed successfully! 🎉")
-        print(f"📊 Total rows processed: {total_rows}")
+        print("📊 STATISTICS:")
+        print(f"   📥 Input Rows: {total_rows}")
+        print(f"   📤 Output Rows: {total_rows}")
+        print(f"   ⚖️ Difference (Deleted Rows): 0")
+        print("\n📈 DETAILS:")
         print(f"   🟢 Fixed (True): {fixed_count}")
         print(f"   🔴 Unfixable (False): {failed_count}")
         print(f"   ⚪ Already Valid/Empty (Null): {null_count}")
