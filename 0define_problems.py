@@ -217,15 +217,16 @@ def validate_and_transform_row(row, columns, seen_hashes, rules, date_format):
             
         str_val = str(val).strip()
 
-        # 2. Date Validation
-        if col_name in rules.get("date", set()):
+        # 2. Date and Datetime Validation
+        is_date = col_name in rules.get("date", set())
+        is_datetime = col_name in rules.get("datetime", set())
+        
+        if is_date or is_datetime:
             raw_val = str(val).strip()
             
             has_letters = any(c.isalpha() for c in raw_val)
-            
             parts = raw_val.split()
             has_time = ":" in raw_val or len(parts) > 1
-            
             has_persian_digits = any(c in raw_val for c in "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩")
 
             test_val = re.sub(r'[/.]', '-', parts[0] if parts else "").strip()
@@ -237,19 +238,26 @@ def validate_and_transform_row(row, columns, seen_hashes, rules, date_format):
             else: formats = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y"]
 
             is_perfect_gregorian = False
-            if not has_time and not has_letters and not has_persian_digits:
+            if not has_letters and not has_persian_digits:
                 for fmt in formats:
                     try:
                         dt = datetime.strptime(test_val, fmt)
                         if dt.year > 1500:
                             is_perfect_gregorian = True
-                            row[idx] = dt.strftime("%Y-%m-%d")
+                            if is_datetime:
+                                time_match = re.search(r'(\d{1,2}:\d{2}(?::\d{2})?)', raw_val)
+                                t_str = time_match.group(1) if time_match else "00:00:00"
+                                if len(t_str.split(':')) == 2: t_str += ":00"
+                                row[idx] = dt.strftime(f"%Y-%m-%d {t_str}")
+                            else:
+                                row[idx] = dt.strftime("%Y-%m-%d")
                             break
                     except: continue
 
             if not is_perfect_gregorian:
                 issue_tags = []
-                if has_time: issue_tags.append("TimeDetected")
+                if has_time and is_date: issue_tags.append("TimeDetected")
+                if not has_time and is_datetime: issue_tags.append("MissingTime")
                 if has_letters: issue_tags.append("MixedContent")
                 if has_persian_digits or (re.search(r'(13\d{2}|14\d{2})', raw_val)): issue_tags.append("Shamsi/Persian")
                 
@@ -366,11 +374,12 @@ def main(input_file, file_type, delimiter=','):
         "numeric": ask_user_for_columns("Which columns must contain ONLY NUMBERS? (e.g. phone, ID)", all_unique_cols),
         "alpha": ask_user_for_columns("Which columns must contain ONLY LETTERS? (e.g. first_name, last_name)", all_unique_cols),
         "email": ask_user_for_columns("Which columns contain EMAILS?", all_unique_cols),
-        "date": ask_user_for_columns("Which columns contain DATES?", all_unique_cols)
+        "date": ask_user_for_columns("Which columns contain DATES?", all_unique_cols),
+        "datetime": ask_user_for_columns("Which columns contain DATE & TIME? (Will add 00:00:00 if time is missing)", all_unique_cols),
     }
 
     date_format_choice = '3'
-    if rules["date"]:
+    if rules["date"] or rules["datetime"]:
         date_format_choice = ask_date_format()
         
     print("\n" + "="*50 + "\n")

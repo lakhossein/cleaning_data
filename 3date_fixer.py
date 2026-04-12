@@ -12,7 +12,7 @@ CHUNK_SIZE = 50000
 
 class DateAuditorModule:
     @staticmethod
-    def extract_and_convert(val, fmt_choice):
+    def extract_and_convert(val, fmt_choice, is_datetime=False):
         if pd.isna(val) or val is None or str(val).strip() == "": return None
         
         d = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
@@ -24,6 +24,10 @@ class DateAuditorModule:
         if not match: return None
         date_str = match.group(1).replace('.', '-').replace('/', '-')
         
+        time_match = re.search(r'(\d{1,2}:\d{2}(?::\d{2})?)', clean_text)
+        t_str = time_match.group(1) if time_match else "00:00:00"
+        if len(t_str.split(':')) == 2: t_str += ":00"
+        
         fmts = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y", "%y-%m-%d", "%d-%m-%y"]
         if fmt_choice == '1': fmts.insert(0, fmts.pop(1))
         elif fmt_choice == '2': fmts.insert(0, fmts.pop(2))
@@ -33,36 +37,42 @@ class DateAuditorModule:
                 try:
                     jt = jdatetime.datetime.strptime(date_str, f)
                     if 1300 <= jt.year <= 1500:
-                        return jt.togregorian().strftime("%Y-%m-%d")
+                        greg_date = jt.togregorian().strftime("%Y-%m-%d")
+                        return f"{greg_date} {t_str}" if is_datetime else greg_date
                 except: pass
                 
                 dt = datetime.strptime(date_str, f)
                 if dt.year > 1500:
-                    return dt.strftime("%Y-%m-%d")
+                    greg_date = dt.strftime("%Y-%m-%d")
+                    return f"{greg_date} {t_str}" if is_datetime else greg_date
             except: continue
         return None
 
-def process_row_logic(row, date_cols, fmt_choice):
+def process_row_logic(row, date_cols, datetime_cols, fmt_choice):
     any_fixed = False
     any_failed = False
     
-    for date_col in date_cols:
-        original_val = row.get(date_col)
+    all_cols = date_cols + datetime_cols
+    
+    for col in all_cols:
+        original_val = row.get(col)
         error_cols = str(row.get("error_column", "")) if pd.notna(row.get("error_column")) else ""
         
-        if date_col not in error_cols:
+        is_datetime = col in datetime_cols
+
+        if col not in error_cols:
             pass 
         else:
-            fixed_val = DateAuditorModule.extract_and_convert(original_val, fmt_choice)
+            fixed_val = DateAuditorModule.extract_and_convert(original_val, fmt_choice, is_datetime=is_datetime)
             if fixed_val:
                 any_fixed = True
-                row[date_col] = fixed_val
+                row[col] = fixed_val
                 
                 msgs_str = str(row.get("error_message", "")) if pd.notna(row.get("error_message")) else ""
-                if date_col in error_cols:
+                if col in error_cols:
                     msgs = msgs_str.split("; ")
-                    cols = error_cols.split("; ")
-                    new_msgs = [f"[Fixed] {m}" if c == date_col and not m.startswith("[Fixed]") else m for c, m in zip(cols, msgs)]
+                    cols_list = error_cols.split("; ")
+                    new_msgs = [f"[Fixed] {m}" if c == col and not m.startswith("[Fixed]") else m for c, m in zip(cols_list, msgs)]
                     row["error_message"] = "; ".join(new_msgs)
             else:
                 any_failed = True
@@ -91,10 +101,14 @@ def main():
         print("❌ No file selected. Exiting...")
         return
 
-    date_cols_input = input("\nEnter DATE columns (comma-separated): ").strip()
+    print("\n" + "="*60)
+    datetime_cols_input = input("Enter DATETIME columns (Date + Time) (comma-separated, press Enter if none): ").strip()
+    datetime_cols = [c.strip() for c in datetime_cols_input.split(',')] if datetime_cols_input else []
+    
+    date_cols_input = input("Enter ONLY DATE columns (comma-separated, press Enter if none): ").strip()
     date_cols = [c.strip() for c in date_cols_input.split(',')] if date_cols_input else []
     
-    if not date_cols:
+    if not date_cols and not datetime_cols:
         print("❌ Column names cannot be empty. Exiting...")
         return
 
@@ -122,7 +136,7 @@ def main():
         with tqdm(total=total_rows, desc="Processing Rows", unit="row") as pbar:
             for i, chunk in enumerate(pd.read_csv(file_path, dtype=str, encoding='utf-8-sig', chunksize=CHUNK_SIZE)):
                 
-                missing_cols = [c for c in date_cols if c not in chunk.columns]
+                missing_cols = [c for c in (date_cols + datetime_cols) if c not in chunk.columns]
                 if missing_cols:
                     print(f"\n❌ Error: Columns {missing_cols} not found in the file!")
                     return
@@ -134,7 +148,7 @@ def main():
                 processed_records = []
                 
                 for row in records:
-                    proc_row = process_row_logic(row, date_cols, fmt_choice)
+                    proc_row = process_row_logic(row, date_cols, datetime_cols, fmt_choice)
                     status = proc_row.get("date_fix_status")
                     if status is True: fixed_count += 1
                     elif status is False: failed_count += 1
