@@ -6,7 +6,6 @@ from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 
 def run_pipeline():
-    Tk().withdraw()
     
     print("="*60)
     print("🚀 STARTING THE AUTOMATED DATA ETL PIPELINE")
@@ -16,10 +15,18 @@ def run_pipeline():
     # مرحله ۰: دریافت نام فایل اولیه
     # ==========================================
     print("\n[INIT] To ensure the final filename and folder match exactly, please select your ORIGINAL raw data file first:")
+
+    root1 = Tk()
+    root1.withdraw()
+    root1.attributes('-topmost', True)
+    
     original_file_path = askopenfilename(
+        parent=root1,
         title="Select ORIGINAL Raw Data File",
         filetypes=[("All Files", "*.*")]
     )
+    
+    root1.destroy()
     
     if not original_file_path:
         print("❌ No file selected. Pipeline stopped.")
@@ -95,6 +102,18 @@ def run_pipeline():
     print("🎯 FINALIZING FOLDER AND FILE NAME")
     print("="*60)
     print("Please select the FINAL processed CSV file (the output from Step 4):")
+
+    root2 = Tk()
+    root2.withdraw()
+    root2.attributes('-topmost', True)
+    
+    final_processed_path = askopenfilename(
+        parent=root2,
+        title="Select FINAL Processed File from Step 4",
+        filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")]
+    )
+    
+    root2.destroy()
     
     final_processed_path = askopenfilename(
         title="Select FINAL Processed File from Step 4",

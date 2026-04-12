@@ -91,12 +91,21 @@ def get_total_rows(file_path):
         return sum(1 for _ in f) - 1
 
 def main():
-    Tk().withdraw()
+    root = Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
     print("="*60)
     print("📅 GLOBAL DATE CLEANER & AUDITOR (Optimized)")
     print("="*60)
     
-    file_path = askopenfilename(title="Select CSV File", filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")])
+    file_path = askopenfilename(
+        parent=root,
+        title="Select FINAL Processed File from Step 4",
+        filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")]
+    )
+    
+    root.destroy()
+    
     if not file_path:
         print("❌ No file selected. Exiting...")
         return

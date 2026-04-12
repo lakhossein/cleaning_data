@@ -460,7 +460,9 @@ def main(input_file, file_type, delimiter=','):
 # ENTRY POINT
 # ==========================================
 if __name__ == "__main__":
-    Tk().withdraw()
+    root = Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
     
     print("="*50)
     print("📂 SELECT FILE FORMAT")
@@ -513,9 +515,12 @@ if __name__ == "__main__":
                 print("❌ Invalid choice! Please enter a number between 1 and 5.")
 
     file_path = askopenfilename(
+        parent=root,
         title=f"Select {file_type.upper()} File",
         filetypes=[(f"{file_type.upper()} Files", f"*.{file_type}"), ("All Files", "*.*")]
     )
+
+    root.destroy()
 
     if not file_path:
         print("No file selected. Exiting...")
