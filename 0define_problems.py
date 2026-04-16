@@ -97,13 +97,34 @@ def extract_rows_from_values(values_block):
 # SQL STREAM PARSER
 # ==========================================
 def parse_sql_stream(content):
-    pattern = r"INSERT INTO\s+`?(\w+)`?\s*\((.*?)\)\s*VALUES\s*(.*?);"
-    inserts = re.finditer(pattern, content, re.S | re.I)
+    table_schemas = {}
+    create_pattern = r"CREATE\s+TABLE\s+`?(\w+)`?\s*\((.*?)\)\s*(?:ENGINE|;)"
+    for match in re.finditer(create_pattern, content, re.S | re.I):
+        table_name = match.group(1)
+        columns_block = match.group(2)
+        
+        columns = []
+        for line in columns_block.split('\n'):
+            line = line.strip()
+            if line.startswith('`'):
+                col_name = line.split('`')[1]
+                columns.append(col_name)
+        table_schemas[table_name] = columns
+
+    insert_pattern = r"INSERT\s+INTO\s+`?(\w+)`?(?:\s*\((.*?)\))?\s*VALUES\s*(.*?);"
+    inserts = re.finditer(insert_pattern, content, re.S | re.I)
 
     for match in inserts:
         table_name = match.group(1)
-        columns = [c.strip().replace("`", "") for c in match.group(2).split(",")]
+        cols_str = match.group(2)
         values_block = match.group(3)
+
+        if cols_str:
+            columns = [c.strip().replace("`", "") for c in cols_str.split(",")]
+        else:
+            columns = table_schemas.get(table_name, [])
+            if not columns:
+                continue
 
         rows = extract_rows_from_values(values_block)
         
