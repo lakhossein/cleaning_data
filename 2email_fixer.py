@@ -19,6 +19,7 @@ def is_valid_email(email):
 def clean_and_fix_email(val):
     if not val or pd.isna(val) or str(val).strip() == "": return None, False
     email = str(val).lower().strip()
+    email = re.sub(r'\s+\.?([a-z]{2,4})$', r'.\1', email)
     email = email.replace(" ", "").replace(",", ".").replace("çcom", ".com").replace("mcom", ".com")
     email = re.sub(r'\.{2,}', '.', email)
     email = email.replace(".@", "@")
