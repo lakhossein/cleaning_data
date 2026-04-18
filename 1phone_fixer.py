@@ -38,7 +38,7 @@ def process_row_logic(row, phone_cols):
                 row["error_message"] = "; ".join(new_msgs)
         else:
             any_failed = True
-            row[phone_col] = None
+            row[phone_col] = original_val 
 
     if any_fixed:
         row["phone_fix_status"] = True
