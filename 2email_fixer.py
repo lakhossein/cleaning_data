@@ -10,7 +10,7 @@ from tkinter.filedialog import askopenfilename
 CHUNK_SIZE = 50000
 EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", re.IGNORECASE)
 MAJOR_PROVIDERS = ["gmail", "hotmail", "outlook", "yahoo", "icloud", "yandex", "aol", "protonmail", "live", "msn", "zoho", "gmx", "mail"]
-COMMON_TLDS = ["com", "net", "org", "edu", "gov", "ir", "tr", "co.uk", "info"]
+COMMON_TLDS = ["com", "net", "org", "edu", "gov", "info", "biz", "app"]
 
 def is_valid_email(email):
     if not email or pd.isna(email): return False
@@ -45,9 +45,10 @@ def clean_and_fix_email(val):
             if provider_matches:
                 provider = provider_matches[0]
             # Fix TLD (com, net, org, ...)
-            tld_matches = difflib.get_close_matches(tld, COMMON_TLDS, n=1, cutoff=0.6)
-            if tld_matches:
-                tld = tld_matches[0]
+            if not re.match(r'^([a-z0-9-]+\.)?[a-z]{2}$', tld):
+                tld_matches = difflib.get_close_matches(tld, COMMON_TLDS, n=1, cutoff=0.7)
+                if tld_matches:
+                    tld = tld_matches[0]
             domain = f"{provider}.{tld}"
         email = f"{username}@{domain}"
         
